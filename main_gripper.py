@@ -6,12 +6,15 @@
 # 	def grip(self, value):
 # 		self.value = value
 
+import time
 
 class SoftGripper:
-    def __init__(self, max_pressure, min_pressure, current_pressure):
+    def __init__(self, max_pressure, min_pressure, current_pressure, tolerance=3, release_speed=1):
         self.max_pressure = max_pressure  # 최대 압력 값
         self.min_pressure = min_pressure  # 최소 압력 값
         self.current_pressure = current_pressure  # 현재 압력 값
+        self.tolerance = tolerance  # 압력 허용 오차
+        self.release_speed = release_speed  # 공기 배출 속도 (KPa/s)
         self.gripper_initialized = False
         self.blower_started = False
         self.air_injected = False
@@ -53,6 +56,14 @@ class SoftGripper:
         else:
             print("Detect Object first (물체를 먼저 탐지하세요)")
 
+    def release_object(self):
+            """
+            물건을 놓을 때 공기를 배출하여 그리퍼를 해제하는 함수
+            천천히 공기가 빠지도록 설정
+            """
+            self.release_pressure_slowly()
+            print("Object Released (물건이 놓임)")
+
     def end_process(self):
         print("Process Ended or Terminated (종료)")
         # Reset all states
@@ -80,12 +91,26 @@ class SoftGripper:
         self.current_pressure = self.min_pressure
         print(f"Pressure reset to initial value: {self.current_pressure} units (압력이 초기 설정값으로 복원됨: {self.current_pressure} 단위)")
 
+    def release_pressure_slowly(self):
+            """
+            조절 밸브를 사용하여 천천히 공기가 빠지도록 설정하는 함수
+            """
+            while self.current_pressure > self.min_pressure:
+                self.current_pressure -= self.release_speed
+                if self.current_pressure < self.min_pressure:
+                    self.current_pressure = self.min_pressure
+                print(f"Releasing pressure slowly: {self.current_pressure} KPa (압력을 천천히 배출 중)")
+                time.sleep(1)  # 속도 조절을 위한 대기 시간 (1초에 release_speed만큼 감소)
 
-# Usage example
-gripper = SoftGripper()
+
+gripper = SoftGripper(max_pressure=100, min_pressure=0, current_pressure=50, tolerance=4, release_speed=5)
 gripper.initialize_gripper()
 gripper.start_blower()
 gripper.inject_air()
-gripper.detect_object(method="direct")  # or method="vision"
+gripper.set_pressure(70)  # 목표 압력을 70 KPa로 설정
+# gripper.detect_object(method="direct")  # or method="vision"
+gripper.detect_object(method="vision")  # method="direct"로도 가능
 gripper.pick_object()
+gripper.release_object()  # 물건을 놓을 때 천천히 공기 배출
+gripper.reset_to_initial_pressure()  # 초기 설정값으로 복원
 gripper.end_process()
